@@ -1,0 +1,8 @@
+VERSION: 0.1
+PROJECT: fast
+
+
+FILES:
+   src/main.cpp
+   src/fast.hpp
+   src/fast.cpp
