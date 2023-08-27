@@ -35,6 +35,7 @@ class Fast {
         auto GetProjectNameFromTheDirName() -> std::string;
         auto GetDirName() -> std::string;
         auto BuildFastProject() -> void;
+        auto RunFast() -> void;
 
         // Modules
         auto GenrateModuleDir() -> void;

@@ -239,3 +239,26 @@ auto Fast::BuildFastProject() -> void {
         std::cout << "Build failed." << std::endl;
     }
 }
+
+
+
+
+auto Fast::RunFast() -> void {
+#ifdef _WIN32
+    const std::string kExecutableExtension = ".exe";
+    const std::string kPathSeparator = "\\";
+#else
+    const std::string kExecutableExtension = "";
+    const std::string kPathSeparator = "/";
+#endif
+
+    std::cout << "Running the fast project." << std::endl;
+    std::string run_command = "." + kPathSeparator + "build" + kPathSeparator + fast_executable_name + kExecutableExtension;
+    std::cout << "Running: " << run_command << std::endl;
+    int run_result = std::system(run_command.c_str());
+
+    if (run_result == 0) {
+    } else {
+        std::cout << "Run failed." << std::endl;
+    }
+}

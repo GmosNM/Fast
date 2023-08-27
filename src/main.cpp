@@ -27,8 +27,13 @@ int main(int argc, char** argv) {
         fast.setCompiler(parser.getCompilerName());
         fast.setExecutableName(parser.getExecutableName());
         fast.UpdateTheFastFile();
-    } else if (strcmp(argv[1], "test") == 0) {
-        // Handle the "test" option
+    } else if (strcmp(argv[1], "run") == 0) {
+        parser.parse(".fast");
+        fast.setCompiler(parser.getCompilerName());
+        fast.setExecutableName(parser.getExecutableName());
+        fast.BuildFastProject();
+        fast.RunFast();
+    }else if (strcmp(argv[1], "test") == 0) {
     } else {
         std::cerr << "Wrong argument" << std::endl;
         print_usage();
