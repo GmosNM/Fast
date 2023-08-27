@@ -1,6 +1,6 @@
 VERSION: 0.1
 PROJECT: fast
-EXECUTABLE: isfast
+EXECUTABLE: fast
 COMPILER: clang++
 
 
