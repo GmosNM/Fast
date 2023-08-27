@@ -1,8 +1,16 @@
 VERSION: 0.1
 PROJECT: fast
+EXECUTABLE: isfast
+COMPILER: clang++
 
 
 FILES:
+   src/parser.cpp
    src/main.cpp
    src/fast.hpp
+   src/parser.hpp
    src/fast.cpp
+
+
+MODULES:
+   Modules/test
