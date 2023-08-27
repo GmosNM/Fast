@@ -95,22 +95,30 @@ auto Fast::UpdateTheFastFile() -> void {
 }
 
 
+
 auto Fast::GetCurrentDirName() -> std::string {
     std::string currentPath;
 #ifdef _WIN32
-    const DWORD bufferSize = 1024;
+    const DWORD bufferSize = MAX_PATH;
     char buffer[bufferSize];
-    DWORD result = ::GetCurrentDirectory(bufferSize, buffer);
+    DWORD result = ::GetCurrentDirectoryA(bufferSize, buffer);
     if (result != 0 && result < bufferSize) {
         currentPath = buffer;
     }
 #else
-    const int bufferSize = 256;
+    const int bufferSize = PATH_MAX;
     char buffer[bufferSize];
     if (getcwd(buffer, bufferSize) != nullptr) {
         currentPath = buffer;
     }
 #endif
+
+    // Extract only the directory name from the full path
+    size_t lastSlash = currentPath.find_last_of("/\\");
+    if (lastSlash != std::string::npos) {
+        currentPath = currentPath.substr(lastSlash + 1);
+    }
+
     return currentPath;
 }
 
