@@ -3,6 +3,7 @@
 void Fast::init() {
     std::string filename = ".fast";
     std::fstream file(filename, std::ios::in);
+    fast_compiler_name = "clang++";
 
     if (!file) {
         std::cout << "Creating file: " << filename << std::endl;
@@ -82,6 +83,8 @@ auto Fast::UpdateTheFastFile() -> void {
     std::fstream _fast_file(Fast::fast_file, std::ios::out);
     _fast_file << "VERSION: " << Fast::fast_version << std::endl;
     _fast_file << "PROJECT: " << Fast::fast_project_name << std::endl;
+    _fast_file << "EXECUTABLE: " << Fast::fast_executable_name << std::endl;
+    _fast_file << "COMPILER: " << Fast::fast_compiler_name << std::endl;
     _fast_file << "\n\nFILES:" << std::endl;
     for (const auto& file : src_fast_files) {
         _fast_file << "   " << file << std::endl;
@@ -186,20 +189,21 @@ auto Fast::CreateDirectory_(const std::string& dir) -> bool {
     }
 }
 
+
 auto Fast::BuildFastProject() -> void {
     std::cout << "Building the fast project." << std::endl;
     std::cout << "Project name: " << fast_project_name << std::endl;
+    std::cout << "Fast Executable: " << fast_executable_name << std::endl;
     std::cout << "Fast file: " << fast_file << std::endl;
     std::cout << "Fast Modules: " << fast_modules.size() << std::endl;
     std::cout << "Fast version: " << fast_version << std::endl;
     std::cout << "Current files: " << src_fast_files.size() << std::endl;
     std::cout << "Fast compiler: " << fast_compiler_name << std::endl;
 
-
     CreateDirectory_("build");
 
     std::vector<std::string> object_files;
-
+    std::cout << "Compiling object files:" << std::endl;
     for (const auto& file : src_fast_files) {
         if (GetFileExtension(file) == "hpp" || GetFileExtension(file) == "h") {
             continue;
@@ -207,8 +211,8 @@ auto Fast::BuildFastProject() -> void {
         std::string object_file = "build/" + GetFileNameWithoutExtension(file) + ".o";
         object_files.push_back(object_file);
 
-        std::string compile_command = "" + fast_compiler_name + "-c " + file + " -o " + object_file;
-        std::cout << "Compile command: " << compile_command << std::endl;
+        std::string compile_command = fast_compiler_name + " -c " + file + " -o " + object_file;
+        std::cout << "\tCompileing:" << GetFileNameWithoutExtension(file) << ".o" << std::endl;
         Fast::fast_object_files.insert(object_file);
 
         int compile_result = std::system(compile_command.c_str());
@@ -222,11 +226,10 @@ auto Fast::BuildFastProject() -> void {
     std::string build_command = fast_compiler_name;
 
     for (const auto& object_file : object_files) {
-        build_command += object_file + " ";
+        build_command += " " + object_file;
     }
 
-    build_command += "-o build/" + fast_project_name + ".exe";
-    std::cout << "Build command: " << build_command << std::endl;
+    build_command += " -o build/" + fast_executable_name + ".exe";
 
     int build_result = std::system(build_command.c_str());
 
@@ -236,4 +239,3 @@ auto Fast::BuildFastProject() -> void {
         std::cout << "Build failed." << std::endl;
     }
 }
-
