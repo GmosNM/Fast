@@ -1,6 +1,5 @@
 #include "fast.hpp"
 
-
 void Fast::init() {
     std::string filename = ".fast";
     std::fstream file(filename, std::ios::in);
@@ -16,52 +15,121 @@ void Fast::init() {
     }
 }
 
-auto Fast::WalkIntoDir(std::string dir) -> std::vector<std::string> {
+auto Fast::WalkIntoDir(const std::string& dir) -> std::vector<std::string> {
     std::vector<std::string> files;
-    for (auto& file : std::filesystem::directory_iterator(dir)) {
-        files.push_back(file.path().string());
+
+#ifdef _WIN32
+    std::string searchPath = dir + "/*";
+    WIN32_FIND_DATAA findData;
+    HANDLE hFind = FindFirstFileA(searchPath.c_str(), &findData);
+
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            if (strcmp(findData.cFileName, ".") != 0 && strcmp(findData.cFileName, "..") != 0) {
+                std::string filePath = dir + "/" + findData.cFileName;
+                files.push_back(filePath);
+            }
+        } while (FindNextFileA(hFind, &findData) != 0);
+
+        FindClose(hFind);
     }
+#else
+    DIR* directory = opendir(dir.c_str());
+    if (directory != nullptr) {
+        struct dirent* entry;
+        while ((entry = readdir(directory)) != nullptr) {
+            if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+                std::string filePath = dir + "/" + entry->d_name;
+                files.push_back(filePath);
+            }
+        }
+        closedir(directory);
+    }
+#endif
+
     return files;
 }
 
-auto Fast::CleanDirVectorPath(std::string dir) -> std::vector<std::string> {
-    if (!std::filesystem::exists(dir)) {
+auto Fast::CleanDirVectorPath(const std::string& dir) -> std::vector<std::string> {
+    if (!DirectoryExists(dir)) {
         std::cout << "Creating folder: " << dir << std::endl;
-        std::filesystem::create_directory(dir);
+        Fast::CreateDirectory_(dir);
     }
 
-    std::vector<std::string> files = this->WalkIntoDir(dir);
+    std::vector<std::string> files = WalkIntoDir(dir);
     for (auto& file : files) {
+        // Remove "./" occurrences
         size_t pos = file.find("./");
         while (pos != std::string::npos) {
             file.erase(pos, 2);
             pos = file.find("./");
         }
+
+        // Replace backslashes with forward slashes
         size_t backslashPos = file.find("\\");
         while (backslashPos != std::string::npos) {
             file.replace(backslashPos, 1, "/");
             backslashPos = file.find("\\", backslashPos + 1);
         }
     }
+
     std::sort(files.begin(), files.end());
     return files;
 }
 
 auto Fast::UpdateTheFastFile() -> void {
+    std::unordered_set<std::string> fast_modules = KeepTrackOfModules();
     std::fstream _fast_file(Fast::fast_file, std::ios::out);
     _fast_file << "VERSION: " << Fast::fast_version << std::endl;
     _fast_file << "PROJECT: " << Fast::fast_project_name << std::endl;
     _fast_file << "\n\nFILES:" << std::endl;
-    for (const auto& file : this->src_fast_files) {
+    for (const auto& file : src_fast_files) {
         _fast_file << "   " << file << std::endl;
     }
+    _fast_file << "\n\nMODULES:" << std::endl;
+    for (const auto& module : fast_modules) {
+        _fast_file << "   " << module << std::endl;
+    }
+
     _fast_file.close();
 }
 
-auto Fast::GetDirName() -> std::string {
-    return std::filesystem::path(std::filesystem::current_path()).filename().string();
+
+auto Fast::GetCurrentDirName() -> std::string {
+    std::string currentPath;
+#ifdef _WIN32
+    const DWORD bufferSize = 1024;
+    char buffer[bufferSize];
+    DWORD result = ::GetCurrentDirectory(bufferSize, buffer);
+    if (result != 0 && result < bufferSize) {
+        currentPath = buffer;
+    }
+#else
+    const int bufferSize = 256;
+    char buffer[bufferSize];
+    if (getcwd(buffer, bufferSize) != nullptr) {
+        currentPath = buffer;
+    }
+#endif
+    return currentPath;
 }
 
+
+bool Fast::DirectoryExists(const std::string& dir) {
+#ifdef _WIN32
+    DWORD attrib = GetFileAttributesA(dir.c_str());
+    return (attrib != INVALID_FILE_ATTRIBUTES && (attrib & FILE_ATTRIBUTE_DIRECTORY));
+#else
+    struct stat info;
+    if (stat(dir.c_str(), &info) != 0)
+        return false;
+    return S_ISDIR(info.st_mode);
+#endif
+}
+
+auto Fast::GetDirName() -> std::string {
+    return GetCurrentDirName();
+}
 
 std::string Fast::GetProjectNameFromTheDirName() {
     std::string dirName = GetDirName();
@@ -87,15 +155,40 @@ auto Fast::GetFileExtension(const std::string& file) {
     return file.substr(lastDot + 1);
 }
 
+auto Fast::GenrateModuleDir() -> void {
+    CreateDirectory_("Modules");
+}
+
+auto Fast::KeepTrackOfModules() -> std::unordered_set<std::string> {
+    std::vector<std::string> modules = CleanDirVectorPath("Modules");
+    return std::unordered_set<std::string>(modules.begin(), modules.end());
+}
+
+auto Fast::CreateDirectory_(const std::string& dir) -> bool {
+#ifdef _WIN32
+    int result = _mkdir(dir.c_str());
+#else
+    int result = mkdir(dir.c_str(), 0777); // 0777 gives read, write, and execute permissions
+#endif
+
+    if (result == 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 auto Fast::BuildFastProject() -> void {
     std::cout << "Building the fast project." << std::endl;
     std::cout << "Project name: " << fast_project_name << std::endl;
     std::cout << "Fast file: " << fast_file << std::endl;
+    std::cout << "Fast Modules: " << fast_modules.size() << std::endl;
     std::cout << "Fast version: " << fast_version << std::endl;
     std::cout << "Current files: " << src_fast_files.size() << std::endl;
     std::cout << "Fast compiler: " << fast_compiler_name << std::endl;
 
-    std::filesystem::create_directory("build");
+
+    CreateDirectory_("build");
 
     std::vector<std::string> object_files;
 
@@ -108,6 +201,7 @@ auto Fast::BuildFastProject() -> void {
 
         std::string compile_command = "" + fast_compiler_name + "-c " + file + " -o " + object_file;
         std::cout << "Compile command: " << compile_command << std::endl;
+        Fast::fast_object_files.insert(object_file);
 
         int compile_result = std::system(compile_command.c_str());
 
